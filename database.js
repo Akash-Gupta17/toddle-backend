@@ -1,6 +1,5 @@
-const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./journal.db'); // file-based DB
-
+const Database = require('better-sqlite3');
+const db = new Database('./journal.db');
 // Run once to create tables
 db.serialize(() => {
   // Users table

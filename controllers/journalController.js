@@ -9,44 +9,35 @@ exports.createJournal = (req, res) => {
     return res.status(403).json({ message: 'Only teachers can create journals' });
   }
 
-  const finalAttachment = file ? file.path : attachment; // file upload or URL
-  const finalType = file ? file.mimetype.split('/')[0] : attachment_type; // e.g., image, video, pdf, url
-  console.log("VALUES TO INSERT:");
-  console.log({
-  description,
-  published_at,
-  created_by: username,
-  attachment: finalAttachment,
-  attachment_type: finalType});
+  const finalAttachment = file ? file.path : attachment;
+  const finalType = file ? file.mimetype.split('/')[0] : attachment_type;
 
-  console.log("QUERY:");
-  console.log(`INSERT INTO journals (description, published_at, created_by, attachment, attachment_type) VALUES (?, ?, ?, ?, ?)`); 
+  try {
+    const insert = db.prepare(`
+      INSERT INTO journals (description, published_at, created_by, attachment, attachment_type)
+      VALUES (?, ?, ?, ?, ?)
+    `);
 
-  db.run(
-    `INSERT INTO journals (description, published_at, created_by, attachment, attachment_type)
-     VALUES (?, ?, ?, ?, ?)`,
-    [description, published_at, username, finalAttachment, finalType],
-    function (err) {
-      if (err) return res.status(500).json({ message: 'DB error', error: err });
+    const result = insert.run(description, published_at, username, finalAttachment, finalType);
+    const journalId = result.lastInsertRowid;
 
-      const journalId = this.lastID;
-
-      if (students && students.length > 0) {
-        const stmt = db.prepare(`INSERT INTO journal_students (journal_id, student_name) VALUES (?, ?)`);
-        students.forEach(student => {
-          stmt.run(journalId, student);
-          // Mock notification
-          console.log(`📢 Notification: ${student}@school.com was tagged in Journal #${journalId}`);
-        });
-        stmt.finalize();
+    if (students && students.length > 0) {
+      const stmt = db.prepare(`INSERT INTO journal_students (journal_id, student_name) VALUES (?, ?)`);
+      for (const student of students) {
+        stmt.run(journalId, student);
+        console.log(`📢 Notification: ${student}@school.com was tagged in Journal #${journalId}`);
       }
-
-      res.status(201).json({
-        message: 'Journal created with attachment',
-        journal_id: journalId
-      });
     }
-  );
+
+    res.status(201).json({
+      message: 'Journal created with attachment',
+      journal_id: journalId
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
 };
 
 exports.getFeed = (req, res) => {

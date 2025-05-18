@@ -1,18 +1,17 @@
 const Database = require('better-sqlite3');
 const db = new Database('./journal.db');
-// Run once to create tables
-db.serialize(() => {
-  // Users table
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      role TEXT
-    )
-  `);
 
-  // Journals table
-  db.run(`
+// Users table (optional)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    role TEXT
+  )
+`).run();
+
+// Journals table
+db.prepare(`
   CREATE TABLE IF NOT EXISTS journals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     description TEXT,
@@ -21,16 +20,14 @@ db.serialize(() => {
     attachment TEXT,
     attachment_type TEXT
   )
-`);
+`).run();
 
-
-  // Join table: Journal ↔ Students
-  db.run(`
-    CREATE TABLE IF NOT EXISTS journal_students (
-      journal_id INTEGER,
-      student_name TEXT
-    )
-  `);
-});
+// Journal-Students (tagging)
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS journal_students (
+    journal_id INTEGER,
+    student_name TEXT
+  )
+`).run();
 
 module.exports = db;
